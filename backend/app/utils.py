@@ -5,7 +5,7 @@ import logging
 import re
 import sys
 import unicodedata
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urlparse
 
 from app.config import settings
 
@@ -56,12 +56,21 @@ def base_url_from_index(index_url: str) -> str:
 
 
 def join_url(base: str, *parts: str) -> str:
-    """Join URL parts safely onto a base."""
-    url = base
+    """Join URL parts safely onto a base directory URL.
+
+    Unlike ``urljoin``, this never drops base path segments that look like
+    opaque tokens (e.g. base64-encoded directory names such as ``YzJm...w==/``).
+    """
+    # Ensure base ends with /
+    url = base if base.endswith("/") else base + "/"
     for part in parts:
-        if not url.endswith("/"):
-            url += "/"
-        url = urljoin(url, part.lstrip("/"))
+        # Strip leading slashes so we always append relative to base
+        part = part.lstrip("/")
+        if not part:
+            continue
+        url = url + part if url.endswith("/") else url + "/" + part
+        # If the part itself doesn't end with / and more parts follow, let
+        # the next iteration add the slash.
     return url
 
 

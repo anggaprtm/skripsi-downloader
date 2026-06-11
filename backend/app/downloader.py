@@ -27,10 +27,16 @@ ProgressCallback = Callable[[int, int], None]
 
 _IMAGE_EXTENSIONS = ("jpg", "jpeg", "png", "webp")
 _CONFIG_CANDIDATES = (
+    # Most common FlipBuilder layouts
     "javascript/config.js",
+    "config.js",
+    # ir.unair.ac.id layout (config.js sits next to index.html)
     "mobile/javascript/config.js",
     "files/mobile/javascript/config.js",
-    "config.js",
+    # Other known variants
+    "js/config.js",
+    "scripts/config.js",
+    "assets/config.js",
 )
 
 
@@ -69,7 +75,7 @@ class FlipbookDownloader:
     # -- public API ---------------------------------------------------------
     def fetch_metadata(self, index_url: str) -> FlipbookMeta:
         base = base_url_from_index(index_url)
-        config_text = self._fetch_config(base)
+        config_text = self._fetch_config(base, index_url=index_url)
         title = self._extract_str(config_text, "bookTitle") or "Skripsi"
         total = self._extract_int(config_text, "totalPageCount") or self._extract_int(
             config_text, "pageCount"
@@ -131,19 +137,56 @@ class FlipbookDownloader:
         return DownloadResult(meta=meta, files=ordered, used_large=used_large)
 
     # -- config.js ----------------------------------------------------------
-    def _fetch_config(self, base_url: str) -> str:
+    def _fetch_config(self, base_url: str, index_url: str = "") -> str:
+        """Fetch config.js content.
+
+        Strategy (in order):
+        1. Scrape index.html for a <script src="...config.js"> tag — this is
+           the most reliable way to find it regardless of path layout.
+        2. Fall through a list of known candidate paths.
+        """
+        # Step 1: try to extract the real path from index.html
+        html_src = index_url or base_url.rstrip("/") + "/index.html"
+        try:
+            resp = self.session.get(html_src, timeout=settings.download_timeout)
+            if resp.status_code == 200:
+                # Match any <script src="...config.js"> or ...config.js?v=...
+                matches = re.findall(
+                    r'<script[^>]+src=["\']([^"\']*config\.js[^"\']*)["\']',
+                    resp.text,
+                    re.IGNORECASE,
+                )
+                for src in matches:
+                    # src may be relative ("javascript/config.js") or absolute
+                    if src.startswith("http"):
+                        url = src
+                    else:
+                        url = join_url(base_url, src.split("?")[0])
+                    try:
+                        cr = self.session.get(url, timeout=settings.download_timeout)
+                        if cr.status_code == 200 and cr.text:
+                            logger.info("Loaded config from index.html scrape: %s", url)
+                            return cr.text
+                    except requests.RequestException:
+                        continue
+        except requests.RequestException:
+            pass
+
+        # Step 2: brute-force known candidate paths
         last_error: Optional[Exception] = None
         for candidate in _CONFIG_CANDIDATES:
             url = join_url(base_url, candidate)
             try:
                 resp = self.session.get(url, timeout=settings.download_timeout)
                 if resp.status_code == 200 and resp.text:
-                    logger.info("Loaded config from %s", url)
+                    logger.info("Loaded config from candidate: %s", url)
                     return resp.text
-            except requests.RequestException as exc:  # pragma: no cover - network
+            except requests.RequestException as exc:
                 last_error = exc
+
         raise DownloaderError(
-            f"Could not locate config.js near {base_url} ({last_error})"
+            f"Could not locate config.js near {base_url} "
+            f"(tried {len(_CONFIG_CANDIDATES)} paths + index.html scrape; last error: {last_error})"
         )
 
     @staticmethod
