@@ -1,4 +1,4 @@
-"""API request / response schemas (the public contract)."""
+"""API request / response schemas."""
 from __future__ import annotations
 
 from typing import Optional
@@ -10,11 +10,9 @@ from app.utils import is_valid_http_url
 
 
 class DownloadRequest(BaseModel):
-    """Body for ``POST /api/download``."""
-
-    url: str = Field(..., description="FlipBuilder repository index.html URL.")
-    ocr: bool = Field(default=True, description="Run OCR to produce a searchable PDF.")
-    languages: str = Field(default="ind+eng", description="OCR languages: ind, eng or ind+eng.")
+    url: str = Field(..., description="FlipBuilder index.html URL.")
+    ocr: bool = Field(default=True)
+    languages: str = Field(default="ind+eng")
 
     @field_validator("url")
     @classmethod
@@ -34,14 +32,10 @@ class DownloadRequest(BaseModel):
 
 
 class DownloadResponse(BaseModel):
-    """Response for ``POST /api/download``."""
-
     job_id: str
 
 
 class JobResponse(BaseModel):
-    """Public view of a job (mirrors the realtime tracking contract)."""
-
     job_id: str
     status: JobStatus
     progress: int
@@ -55,6 +49,12 @@ class JobResponse(BaseModel):
     created_at: float
     updated_at: float
     download_url: Optional[str] = None
+
+    # OCR detail fields
+    ocr_current_page: int = 0
+    ocr_total_pages: int = 0
+    ocr_stage: str = ""
+    ocr_start_time: float = 0.0
 
     @classmethod
     def from_job(cls, job: Job) -> "JobResponse":
@@ -77,12 +77,14 @@ class JobResponse(BaseModel):
             created_at=job.created_at,
             updated_at=job.updated_at,
             download_url=download_url,
+            ocr_current_page=job.ocr_current_page,
+            ocr_total_pages=job.ocr_total_pages,
+            ocr_stage=job.ocr_stage,
+            ocr_start_time=job.ocr_start_time,
         )
 
 
 class JobListResponse(BaseModel):
-    """Response for ``GET /api/jobs``."""
-
     jobs: list[JobResponse]
     total: int
 

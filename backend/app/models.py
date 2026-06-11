@@ -30,11 +30,7 @@ ACTIVE_STATUSES = {
 
 
 class Job(BaseModel):
-    """The full persisted state of a job.
-
-    This model is the single source of truth shared between the API process
-    and the worker process through Redis.
-    """
+    """The full persisted state of a job."""
 
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     url: str
@@ -49,7 +45,13 @@ class Job(BaseModel):
     total_pages: int = 0
     current_page: int = 0
 
-    output_file: Optional[str] = None  # relative path inside downloads dir
+    # OCR detail tracking
+    ocr_current_page: int = 0
+    ocr_total_pages: int = 0
+    ocr_start_time: float = 0.0   # epoch when OCR started
+    ocr_stage: str = ""           # human-readable sub-stage
+
+    output_file: Optional[str] = None
     file_size: int = 0
     error: Optional[str] = None
 

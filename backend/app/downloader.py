@@ -196,16 +196,19 @@ class FlipbookDownloader:
 
     @staticmethod
     def _extract_str(text: str, key: str) -> Optional[str]:
-        # Matches  key="value" | key:'value' | "key":"value" | key = `value`
-        pattern = rf"""['"]?{re.escape(key)}['"]?\s*[:=]\s*['"`]([^'"`]*)['"`]"""
-        match = re.search(pattern, text)
-        return match.group(1) if match else None
+        # Handles both object-literal (key:"val") and assignment (bookConfig.key="val") forms.
+        # Returns the LAST match so late assignments override early defaults.
+        pattern = rf"""(?:bookConfig\.)?[\'"]?{re.escape(key)}[\'"]?\s*[:=]\s*[\'"`]([^\'"`]*)[\'"`]"""
+        matches = re.findall(pattern, text)
+        return matches[-1] if matches else None
 
     @staticmethod
     def _extract_int(text: str, key: str) -> Optional[int]:
-        pattern = rf"""['"]?{re.escape(key)}['"]?\s*[:=]\s*['"]?(\d+)"""
-        match = re.search(pattern, text)
-        return int(match.group(1)) if match else None
+        # Handles both object-literal (key:0) and assignment (bookConfig.key=143) forms.
+        # Returns the LAST match so late assignments override early defaults.
+        pattern = rf"""(?:bookConfig\.)?[\'"]?{re.escape(key)}[\'"]?\s*[:=]\s*[\'"]?(\d+)"""
+        matches = re.findall(pattern, text)
+        return int(matches[-1]) if matches else None
 
     # -- image set resolution ----------------------------------------------
     def _resolve_template(self, meta: FlipbookMeta) -> tuple[str, bool]:
