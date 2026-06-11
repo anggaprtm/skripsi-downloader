@@ -1,0 +1,58 @@
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: skripsi-redis
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+    volumes:
+      - ./docker/redis.conf:/usr/local/etc/redis/redis.conf:ro
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    container_name: skripsi-backend
+    env_file: .env
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      STORAGE_ROOT: /data
+    volumes:
+      - storage-data:/data
+    depends_on:
+      redis:
+        condition: service_healthy
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    restart: unless-stopped
+
+  worker:
+    build: ./backend
+    container_name: skripsi-worker
+    command: ["python", "worker.py"]
+    env_file: .env
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      STORAGE_ROOT: /data
+    volumes:
+      - storage-data:/data
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    container_name: skripsi-frontend
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+    restart: unless-stopped
+
+volumes:
+  redis-data:
+  storage-data:

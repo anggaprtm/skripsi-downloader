@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-ink-900 text-slate-200 font-sans antialiased;
+    background-image:
+      radial-gradient(900px 480px at 78% -8%, rgba(255, 180, 84, 0.08), transparent 60%),
+      radial-gradient(700px 420px at 8% 4%, rgba(79, 209, 197, 0.06), transparent 55%);
+    background-attachment: fixed;
+  }
+
+  ::selection {
+    @apply bg-amber/30 text-white;
+  }
+}
+
+@layer components {
+  .panel {
+    @apply rounded-2xl border border-line bg-ink-800/80 shadow-panel backdrop-blur-sm;
+  }
+
+  .field {
+    @apply w-full rounded-xl border border-line bg-ink-900/70 px-4 py-3 font-mono text-sm
+      text-slate-100 placeholder:text-slate-600 outline-none transition
+      focus:border-amber/60 focus:shadow-glow;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-amber px-5 py-3
+      text-sm font-semibold text-ink-900 transition hover:bg-amber-soft
+      active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg border border-line
+      bg-ink-700/60 px-3 py-1.5 text-xs font-medium text-slate-300 transition
+      hover:border-amber/40 hover:text-amber-soft;
+  }
+
+  .eyebrow {
+    @apply font-mono text-[11px] uppercase tracking-[0.22em] text-amber/80;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: #252b3b;
+  border-radius: 8px;
+  border: 2px solid #0a0c11;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #323a4f;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
