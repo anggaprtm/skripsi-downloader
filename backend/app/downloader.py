@@ -71,6 +71,11 @@ class FlipbookDownloader:
         self.threads = threads or settings.default_download_threads
         self.session = requests.Session()
         self.session.headers.update({"User-Agent": settings.request_user_agent})
+        # Many university repos (incl. ir.unair.ac.id) use self-signed or
+        # untrusted intermediate certs. Disable verification for read-only fetches.
+        self.session.verify = False
+        import urllib3
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
     # -- public API ---------------------------------------------------------
     def fetch_metadata(self, index_url: str) -> FlipbookMeta:
